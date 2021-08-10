@@ -4,8 +4,8 @@ import fs from 'fs';
 import minimatch from 'minimatch';
 import { gzip } from 'node-gzip';
 import { program } from '@caporal/core';
-import { Logger, NodeIO, PropertyType, VertexLayout, vec2 } from '@gltf-transform/core';
-import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
+import { Logger, NodeIO, PropertyType, VertexLayout, vec2, Transform } from '@gltf-transform/core';
+import { ALL_EXTENSIONS, MeshoptCompression } from '@gltf-transform/extensions';
 import { CenterOptions, InstanceOptions, PartitionOptions, PruneOptions, QUANTIZE_DEFAULTS, ResampleOptions, SequenceOptions, TEXTURE_RESIZE_DEFAULTS, TextureResizeFilter, UnweldOptions, WeldOptions, center, dedup, instance, metalRough, partition, prune, quantize, resample, sequence, tangents, textureResize, unweld, weld, reorder } from '@gltf-transform/functions';
 import { InspectFormat, inspect } from './inspect';
 import { DRACO_DEFAULTS, DracoCLIOptions, ETC1S_DEFAULTS, Filter, Mode, UASTC_DEFAULTS, draco, ktxfix, merge, toktx, unlit } from './transforms';
@@ -388,6 +388,42 @@ given --decodeSpeed.`.trim())
 		Session.create(io, logger, args.input, args.output)
 			.transform(weld({tolerance: 0}), draco(options as unknown as DracoCLIOptions))
 	);
+
+// MESHOPT
+program
+	.command('meshopt', 'Compress geometry and animation with Meshopt')
+	.help(`
+Compress geometry and animation with Meshopt. Meshopt compression decodes
+very quickly, and is best used in combination with a lossless compression
+method like brotli or gzip.`.trim())
+	.argument('<input>', INPUT_DESC)
+	.argument('<output>', OUTPUT_DESC)
+	.option('--method <method>', ''
+		+ 'Compression method (filter encoding provides more compression, but is lossier).', {
+		validator: ['quantize', 'filter'],
+		default: 'quantize',
+	})
+	.option('--reorder <reorder>', 'Whether to reorder vertices for optimal compression.', {
+		validator: program.BOOLEAN,
+		default: true,
+	})
+	.action(async ({args, options, logger}) => {
+		const stages: Transform[] = [];
+		if (options.reorder) stages.push(reorder({encoder: MeshoptEncoder}));
+		if (options.method === 'quantize') stages.push(quantize());
+		stages.push(
+			(doc) => doc.createExtension(MeshoptCompression)
+				.setRequired(true)
+				.setEncoderOptions({...options})
+		);
+		try {
+			await Session.create(io, logger, args.input, args.output).transform(...stages);
+		} catch (e) {
+			logger.error(e);
+			console.error(e);
+			throw e;
+		}
+	});
 
 // QUANTIZE
 program
