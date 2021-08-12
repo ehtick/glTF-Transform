@@ -409,8 +409,17 @@ method like brotli or gzip.`.trim())
 	})
 	.action(async ({args, options, logger}) => {
 		const stages: Transform[] = [];
-		if (options.reorder) stages.push(reorder({encoder: MeshoptEncoder}));
-		if (options.method === 'quantize') stages.push(quantize());
+		if (options.reorder) {
+			stages.push(reorder({encoder: MeshoptEncoder}));
+		}
+		if (options.method === 'quantize') {
+			stages.push(quantize({
+				quantizePosition: 14,
+				quantizeTexcoord: 12,
+				quantizeColor: 8,
+				quantizeNormal: 8
+			}));
+		}
 		stages.push(
 			(doc) => doc.createExtension(MeshoptCompression)
 				.setRequired(true)
