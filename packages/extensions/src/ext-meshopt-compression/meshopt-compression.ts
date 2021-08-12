@@ -251,8 +251,6 @@ export class MeshoptCompression extends Extension {
 		this._encoderBufferViewData = {};
 		this._encoderBufferViewAccessors = {};
 
-		let nextKey = 1; // TODO(cleanup)
-
 		for (const accessor of this.doc.getRoot().listAccessors()) {
 			const usage = getUsage(accessor, this.doc);
 			const mode = getMeshoptMode(accessor, usage);
@@ -268,10 +266,8 @@ export class MeshoptCompression extends Extension {
 			if (!buffer) throw new Error(`${NAME}: Missing buffer for accessor.`);
 			const bufferIndex = this.doc.getRoot().listBuffers().indexOf(buffer);
 
-			// Create buffer view group key.
-			// const key = [usage, mode, filter, byteStride, bufferIndex].join(':');
-			const key = `${nextKey++}`; // TODO(cleanup): Output breaks when grouped...
-
+			// Buffer view grouping key.
+			const key = [usage, mode, filter, byteStride, bufferIndex].join(':');
 
 			let bufferView = this._encoderBufferViews[key];
 			let bufferViewData = this._encoderBufferViewData[key];
@@ -308,8 +304,9 @@ export class MeshoptCompression extends Extension {
 			json.accessors!.push(accessorDef);
 			bufferViewAccessors.push(accessorDef);
 
-			// Align to 4-byte boundaries, update
+			// Update buffer view.
 			bufferViewData.push(array.slice().buffer);
+			bufferView.byteLength += array.byteLength; // TODO(confirm): Padding?
 			bufferView.extensions.EXT_meshopt_compression.count += accessor.getCount();
 		}
 	}
@@ -332,11 +329,11 @@ export class MeshoptCompression extends Extension {
 			bufferView.extensions[NAME].byteLength = dstArray.byteLength;
 
 			// TODO(cleanup): Remove debugging.
-			bufferView.extras = {
-				key,
-				numAccessors: bufferViewData.length,
-				// accessors: this._encoderBufferViewAccessors[key],
-			};
+			// bufferView.extras = {
+			// 	key,
+			// 	numAccessors: bufferViewData.length,
+			// 	// accessors: this._encoderBufferViewAccessors[key],
+			// };
 
 			bufferViewData.length = 0;
 			bufferViewData.push(compressedData);
