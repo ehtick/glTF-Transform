@@ -241,9 +241,7 @@ export class MeshoptCompression extends Extension {
 		const encoder = this._encoder!;
 		const options = this._encoderOptions;
 
-		// TODO(bug): This will create a new buffer each time the document is written.
-		// Surely that's avoidable?
-		const fallbackBuffer = this.doc.createBuffer();
+		const fallbackBuffer = this.doc.createBuffer(); // Disposed on write.
 		const fallbackBufferIndex = this.doc.getRoot().listBuffers().indexOf(fallbackBuffer);
 
 		this._encoderFallbackBuffer = fallbackBuffer;
@@ -289,7 +287,7 @@ export class MeshoptCompression extends Extension {
 							byteOffset: 0,
 							byteLength: 0,
 							mode: mode,
-							filter: filter,
+							filter: filter === MeshoptFilter.NONE ? undefined : filter,
 							byteStride: byteStride,
 							count: 0
 						}
@@ -325,7 +323,6 @@ export class MeshoptCompression extends Extension {
 			const dstArray = encoder.encodeGltfBuffer(srcArray, count, byteStride, mode);
 			const compressedData = BufferUtils.pad(dstArray.slice().buffer);
 
-			bufferView.byteLength = srcArray.byteLength;
 			bufferView.extensions[NAME].byteLength = dstArray.byteLength;
 
 			// TODO(cleanup): Remove debugging.
@@ -368,9 +365,6 @@ export class MeshoptCompression extends Extension {
 			fallbackBufferByteOffset += BufferUtils.padNumber(bufferView.byteLength);
 		}
 
-		// TODO(cleanup)
-		// console.log(JSON.stringify(context.jsonDoc.json.bufferViews, null, 2));
-
 		// Write final fallback buffer.
 		const fallbackBuffer = this._encoderFallbackBuffer!;
 		const fallbackBufferIndex = context.bufferIndexMap.get(fallbackBuffer)!;
@@ -378,6 +372,9 @@ export class MeshoptCompression extends Extension {
 		fallbackBufferDef.byteLength = fallbackBufferByteOffset;
 		fallbackBufferDef.extensions = {[NAME]: {fallback: true}};
 		fallbackBuffer.dispose();
+
+		// TODO(cleanup)
+		// console.log(JSON.stringify(context.jsonDoc.json.bufferViews, null, 2));
 		return this;
 	}
 }

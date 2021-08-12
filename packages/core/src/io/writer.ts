@@ -357,8 +357,9 @@ export class GLTFWriter {
 				}
 			}
 
-			// We only support embedded images in GLB, so we know there is only one buffer.
-			if (context.imageBufferViews.length) {
+			// We only support embedded images in GLB, where the embedded buffer must be the first.
+			// Additional buffers are currently left empty (see EXT_meshopt_compression fallback).
+			if (context.imageBufferViews.length && index === 0) {
 				for (let i = 0; i < context.imageBufferViews.length; i++) {
 					json.bufferViews![json.images![i].bufferView!].byteOffset = bufferByteLength;
 					bufferByteLength += context.imageBufferViews[i].byteLength;
