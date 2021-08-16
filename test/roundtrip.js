@@ -34,6 +34,8 @@ INDEX.forEach((asset, assetIndex) => {
 			execSync(`gltfpack -i ${base} -o ${dst.replace('{c}', 'ref-cc')} -cc`);
 			execSync(`gltf-transform meshopt ${base} ${dst.replace('{c}', 'c')} --method quantize`);
 			execSync(`gltf-transform meshopt ${base} ${dst.replace('{c}', 'cc')} --method filter`);
+			execSync(`gltf-transform quantize ${base} ${dst.replace('{c}', 'quant-lo')} --quantizePosition 14 --quantizeTexcoord 12 --quantizeColor 8 --quantizeNormal 8`);
+			execSync(`gltf-transform quantize ${base} ${dst.replace('{c}', 'quant-hi')}`);
 			execSync(`gltf-transform draco ${base} ${dst.replace('{c}', 'draco')}`);
 
 			const stats = [
